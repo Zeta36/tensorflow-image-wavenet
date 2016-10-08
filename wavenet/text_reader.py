@@ -4,9 +4,9 @@ import threading
 
 import numpy as np
 import tensorflow as tf
+from PIL import Image
 
-
-def find_files(directory, pattern='*.txt'):
+def find_files(directory, pattern='*.jpg'):
     '''Recursively finds all files matching the pattern.'''
     files = []
     for root, dirnames, filenames in os.walk(directory):
@@ -14,20 +14,20 @@ def find_files(directory, pattern='*.txt'):
             files.append(os.path.join(root, filename))
     return files
 
-def _read_text(filename):
-  with tf.gfile.GFile(filename, "r") as f:
-    return list(f.read().decode("utf-8").replace("\n", ""))
+def _read_image(filename):
+  return Image.open(filename).convert('L')
 
 def load_generic_text(directory):
     '''Generator that yields text raw from the directory.'''
     files = find_files(directory)
     for filename in files:
-        text = _read_text(filename)        
-        for index, item in enumerate(text):
-            text[index] = ord(text[index])
-        text = np.array(text, dtype='float32')
-        text = text.reshape(-1, 1)
-        yield text, filename
+        pic = _read_image(filename)
+        pic = pic.resize((64,64), Image.ANTIALIAS)
+        img = np.array(pic)
+        img = np.array(img, dtype='float32')
+        img = img.reshape(-1, 1)
+        
+        yield img, filename
 
 
 class TextReader(object):

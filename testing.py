@@ -1,9 +1,9 @@
 import fnmatch
 import os
-import tensorflow as tf
 import numpy as np
+from PIL import Image
 
-def find_files(directory, pattern='*.txt'):
+def find_files(directory, pattern='*.jpg'):
     '''Recursively finds all files matching the pattern.'''
     files = []
     for root, dirnames, filenames in os.walk(directory):
@@ -11,31 +11,25 @@ def find_files(directory, pattern='*.txt'):
             files.append(os.path.join(root, filename))
     return files
 
-def _read_text(filename):
-  with tf.gfile.GFile(filename, "r") as f:
-    return list(f.read().decode("utf-8").replace("\n", ""))
+def _read_image(filename):
+  return Image.open(filename).convert('L')
 
 def load_generic_text(directory):
-    '''Generator that yields text raw from the directory.'''
+    '''Generator that yields image raw from the directory.'''
     files = find_files(directory)
     for filename in files:
-        text = _read_text(filename)
-
-        for index, item in enumerate(text):
-            text[index] = ord(text[index])
-
-        text = np.array(text, dtype='float32')
-        print text
-        text = text.reshape(-1, 1)
-
-        print (text)
-        y = []
-        for index, item in enumerate(text):
-            y.append(chr(text[index]))
-            
-        print(y)
-        yield text, filename
-
+        pic = _read_image(filename)
+        pic = pic.resize((128,128), Image.ANTIALIAS)
+        img = np.array(pic)
+        print (img)
+        img = img.reshape(-1, 1)
+        print (img)
+        img = img.reshape(128, 128)
+        print(img)
+        new_img = Image.fromarray(img)
+        new_img.save('output_file.jpg')
+        
+        yield img, filename
         
 def main():
     iterator = load_generic_text("./data")

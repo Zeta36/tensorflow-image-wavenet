@@ -18,10 +18,10 @@ DATA_DIRECTORY = './data'
 LOGDIR_ROOT = './logdir'
 CHECKPOINT_EVERY = 500
 NUM_STEPS = 4000
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 WAVENET_PARAMS = './wavenet_params.json'
 STARTED_DATESTRING = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.now())
-SAMPLE_SIZE = 1000
+SAMPLE_SIZE = 4096
 L2_REGULARIZATION_STRENGTH = 0
 
 
@@ -221,7 +221,6 @@ def main():
         for step in range(saved_global_step + 1, args.num_steps):
             start_time = time.time()
             loss_value, _ = sess.run([loss, optim])
-            print("fin step", step)
             duration = time.time() - start_time
             print('step {:d} - loss = {:.3f}, ({:.3f} sec/step)'
                   .format(step, loss_value, duration))

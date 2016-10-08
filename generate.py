@@ -5,15 +5,15 @@ import argparse
 from datetime import datetime
 import json
 import os
-
+from PIL import Image
 import numpy as np
 import tensorflow as tf
 
 from wavenet import WaveNetModel, text_reader
 
-SAMPLES = 16000
+SAMPLES = 4096
 LOGDIR = './logdir'
-WINDOW = 8000
+WINDOW = 4096
 WAVENET_PARAMS = './wavenet_params.json'
 SAVE_EVERY = None
 
@@ -52,10 +52,10 @@ def get_arguments():
         default=WAVENET_PARAMS,
         help='JSON file with the network parameters')
     parser.add_argument(
-        '--text_out_path',
+        '--img_out_path',
         type=str,
         default=None,
-        help='Path to output txt file')
+        help='Path to output img file')
     parser.add_argument(
         '--save_every',
         type=int,
@@ -69,16 +69,16 @@ def get_arguments():
     return parser.parse_args()
 
     
-def write_text(waveform, filename):
-    text = waveform
-    y = []
-    for index, item in enumerate(text):
-        y.append(chr(text[index]))
-    print('Prediction is: ', ''.join(str(e) for e in y))
-    y = np.array(y)
-    np.savetxt(filename, y.reshape(1, y.shape[0]), delimiter="", newline="\n", fmt="%s")
-    print('Updated text file at {}'.format(filename))
-
+def write_img(waveform, filename):
+    img = waveform[:-1]
+    img = np.array(img)
+    img = img.reshape(-1, 1)
+    img = img.reshape(64, 64)
+    new_img = Image.fromarray(img)
+    new_img = new_img.convert('RGB')
+    new_img.save(filename)
+        
+    print('Updated image file at {}'.format(filename))
 
 def main():
     args = get_arguments()
@@ -121,8 +121,9 @@ def main():
     decode = samples
 
     quantization_channels = wavenet_params['quantization_channels']
-    waveform = [32.]
-
+    waveform = [169]
+    #waveform = np.random.randint(quantization_channels, size=(1,)).tolist()
+        
     last_sample_timestamp = datetime.now()
     for step in range(args.samples):
         if args.fast_generation:
@@ -138,8 +139,9 @@ def main():
 
         # Run the WaveNet to predict the next sample.
         prediction = sess.run(outputs, feed_dict={samples: window})[0]
-        sample = np.random.choice(
-            np.arange(quantization_channels), p=prediction)
+        #sample = np.random.choice(
+        #    np.arange(quantization_channels), p=prediction)
+        sample = np.argmax(prediction)
         waveform.append(sample)
 
         # Show progress only once per second.
@@ -151,18 +153,18 @@ def main():
             last_sample_timestamp = current_sample_timestamp
 
         # If we have partial writing, save the result so far.
-        if (args.text_out_path and args.save_every and
+        if (args.img_out_path and args.save_every and
                 (step + 1) % args.save_every == 0):
             out = sess.run(decode, feed_dict={samples: waveform})
-            write_text(out, args.text_out_path)
+            write_img(out, args.img_out_path)
 
     # Introduce a newline to clear the carriage return from the progress.
     print()
 
     # Save the result as a wav file.
-    if args.text_out_path:
+    if args.img_out_path:
         out = sess.run(decode, feed_dict={samples: waveform})
-        write_text(out, args.text_out_path)
+        write_img(out, args.img_out_path)
 
     print('Finished generating.')
 
